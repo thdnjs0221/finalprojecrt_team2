@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.users.dao.InterviewReviewDAO">
+	<resultMap type="InterviewReviewVO" id="reviewMap">
+		<association property="interviewSchdVO" autoMapping="true" />
+		<association property="apply" autoMapping="true" />
+		<association property="recruit" autoMapping="true" />
+		<association property="company" autoMapping="true" />
+	</resultMap>
+	<sql id="searchFrag">
+		<trim prefix="where" prefixOverrides="AND">
+			<if
+				test="simpleCondition neq null and @org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="simpleCondition.searchType eq 'name'">
+						AND INSTR(COMPANY_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						AND INSTR(COMPANY_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(variousCondition.usersId)">
+				AND USERS_ID=#{variousCondition.usersId}
+			</if>
+		</trim>
+	</sql>
+	<select id="selectTotalRecord" parameterType="PaginationInfo"
+		resultType="int">
+		SELECT COUNT(*)
+			FROM INTERVIEW_REVIEW A JOIN INTERVIEW_SCHD B ON(A.INTR_NO=B.INTR_NO)
+				JOIN APPLY C ON(B.APL_NO=C.APL_NO)
+				JOIN RECRUIT D ON(C.RCRT_NO=D.RCRT_NO)
+				JOIN COMPANY E ON(D.COMPANY_ID=E.COMPANY_ID)
+		<include refid="searchFrag" />
+	</select>
+	<select id="selectReviewList" parameterType="PaginationInfo" resultType="InterviewReviewVO">
+		WITH ORDEREDBRD AS (
+		SELECT A.*, ROWNUM RNUM
+		FROM (
+			SELECT 
+				A.INTREV_NO
+				, A.INTR_NO
+				, A.INTERV_OVRL_EVLTN
+				, A.INTERV_DIFFICULTY
+				, A.INTERVIEW_TYPICAL
+				, A.INTERV_PERSONNEL
+				, A.INTERV_PROCESS
+				, A.INTERV_QUESTION
+				, A.INTERV_TIP
+				, A.INTERV_PASS
+				, A.INTERV_APPROVAL
+				, C.USERS_ID "apply.usersId"
+				, D.RCRT_FIELD "recruit.rcrtField"
+				, E.COMPANY_NM "company.companyNm"
+				FROM INTERVIEW_REVIEW A JOIN INTERVIEW_SCHD B ON(A.INTR_NO=B.INTR_NO)
+				JOIN APPLY C ON(B.APL_NO=C.APL_NO)
+				JOIN RECRUIT D ON(C.RCRT_NO=D.RCRT_NO)
+				JOIN COMPANY E ON(D.COMPANY_ID=E.COMPANY_ID)
+			<include refid="searchFrag" />
+			ORDER BY INTERV_WDATE DESC
+			)A
+			)
+			SELECT *
+			FROM ORDEREDBRD
+			<![CDATA[
+				WHERE RNUM >= #{startRow} AND RNUM <= #{endRow} 
+			]]>
+	</select>
+	<select id="selectReview" parameterType="string" resultType="InterviewReviewVO">
+		SELECT
+			A.INTREV_NO
+			, A.INTR_NO
+			, A.INTERV_OVRL_EVLTN
+			, A.INTERV_DIFFICULTY
+			, A.INTERVIEW_TYPICAL
+			, A.INTERV_PERSONNEL
+			, A.INTERV_PROCESS
+			, A.INTERV_QUESTION
+			, A.INTERV_TIP
+			, A.INTERV_PASS
+			, A.INTERV_APPROVAL
+			, TO_CHAR(B.INTR_DATE, 'YYYY.MM.DD')"interviewSchdVO.intrDate"
+			, C.USERS_ID "apply.usersId"
+			, D.RCRT_FIELD "recruit.rcrtField"
+			, E.COMPANY_NM "company.companyNm"
+			FROM INTERVIEW_REVIEW A JOIN INTERVIEW_SCHD B ON(A.INTR_NO=B.INTR_NO)
+			JOIN APPLY C ON(B.APL_NO=C.APL_NO)
+			JOIN RECRUIT D ON(C.RCRT_NO=D.RCRT_NO)
+			JOIN COMPANY E ON(D.COMPANY_ID=E.COMPANY_ID)
+		WHERE INTREV_NO = #{intrevNo}
+	</select>
+	<update id="updateReview" parameterType="InterviewReviewVO">
+		UPDATE INTERVIEW_REVIEW
+			SET
+		INTERV_OVRL_EVLTN= #{intervOvrlEvltn,jdbcType=VARCHAR}
+		, INTERV_DIFFICULTY= #{intervDifficulty,jdbcType=VARCHAR}
+		, INTERVIEW_TYPICAL= #{interviewTypical,jdbcType=VARCHAR}
+		, INTERV_PERSONNEL= #{intervPersonnel,jdbcType=VARCHAR}
+		, INTERV_PROCESS= #{intervProcess,jdbcType=VARCHAR}
+		, INTERV_QUESTION= #{intervQuestion,jdbcType=VARCHAR}
+		, INTERV_TIP= #{intervTip,jdbcType=VARCHAR}
+		, INTERV_PASS= #{intervPass,jdbcType=VARCHAR}
+		, INTERV_WDATE= SYSDATE
+		WHERE INTREV_NO = #{intrevNo}
+	</update>
+</mapper>
